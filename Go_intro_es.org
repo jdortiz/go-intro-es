@@ -1,0 +1,435 @@
+
+* Reglas de juego
+
+Go es un lenguaje fantástico, con muchas capacidades y muy productivo.  Este taller está pensado para hacer un recorrido
+por algunas de las principales características del lenguaje mientras se construye un programa realista partiendo de
+cero.
+
+Para que esto funcione, creo que hay que adoptar ciertos compromisos que espero que serán de tu agrado.
+1. No explicaré toda la sintaxis de Go, solo las cosas extrictamente necesarias para entender y escribir el código de
+   este taller.
+2. Escribir el código es mejor que copiar y pegar, pero lo tienes a tu disposición aquí.  Haz lo que desees.
+3. Los materiales están disponibles para que los pruebes a tu ritmo más tarde y completes todo lo que te faltó.  Intenta
+   cubrir todo lo que puedas, pero se recomienda seguirlos.
+4. Si eres principiante, copia y prueba lo que hay. Si has visto algo de Go antes, haz preguntas sobre lo que trata este
+   taller.  Si ya tienes experiencia en Go, hay comentarios sobre mejores prácticas y otras cosas que no se cubren.
+   Échales un vistazo y hablemos de ellos.  En resumen, según tu nivel de experiencia, pregunta por la sintaxis,
+   pregunta por la magia, ve a los temas avanzados o ve a tomar algo. :-)
+5. Por último, aunque no vamos a llegar a cubrir más que los puntos esenciales, vamos a construir un programa de backend
+   que permitirá gestionar notas y sus metadatos.
+
+* Excelente para APIs REST
+
+** Hola Mundo
+1. Este taller está pensado y preparado para ejecutarse completamente desde un Codespace de GitHub.  Visita el
+   repositorio [[https://github.com/mongodb-developer/go-intro-cs]] y haz una bifurcación (fork).  Desde tu nuevo
+   repositorio, pulsa el botõn verde que pone "Code", selecciona la pestaña de Codespaces y pulsa sobre "Create
+   codespace on main".  Esto arrancará el entorno y requiere unos minutos.
+2. El codespace mostrará la interfaz de VSCode que es lo que vamos a usar para desarrollar el programa de este
+   taller. Ve a la terminal de VSCode e inicializa el proyecto como un módulo go.
+  #+begin_src go
+    go mod init github.com/jdortiz/go-intro-cs
+  #+end_src
+3. En el explorador de archivos de VSCode, añade un archivo nuevo llamado =main.go= con el siguiente contenido:
+  #+begin_src go
+    package main
+
+    import "fmt"
+
+    func main() {
+            fmt.Println("Hola Caracola")
+    }
+  #+end_src
+4. Repasemos juntos el contenido de ese archivo para comprender qué estamos haciendo aquí.
+   1) Cada archivo fuente debe pertenecer a un paquete (=package=). Todos los archivos de un directorio deben pertenecer
+      al mismo paquete. El paquete principal (=main=) es donde debes crear tu función principal, que es el punto de
+      entrada para el programa ejecutable.
+   2) =func= es la palabra clave para declarar funciones y =main= es donde tu programa comienza a ejecutarse.
+   3) ~fmt.Println()~ es una función de la biblioteca estándar (stdlib) para imprimir un texto en la salida
+      estándar. Pertenece al paquete =fmt=.
+   4) Usar la declaración =import= nos permite usar el paquete =fmt= en el código de este fichero, como hacemos con la
+      función ~fmt.Println()~.
+5. El entorno está configurado para que podamos ejecutar el programa desde VSCode. Utilice "Ejecución y depuración" en
+   la barra izquierda y ejecute el programa. El mensaje "Hola caracola" aparecerá en la consola de depuración.
+6. También puede ejecutar el programa desde el terminal integrado usando
+  #+begin_src sh
+    go run main.go
+  #+end_src
+
+** El servidor web más simple
+1. La biblioteca estándar de Go incluye todas las piezas necesarias para crear un servidor HTTP completo.  Hasta la
+   versión 1.22, era muy común utilizar paquetes de terceros para funciones adicionales, como enrutar fácilmente
+   solicitudes basadas en el verbo HTTP.  Go 1.22 ha agregado la mayoría de las características de esos paquetes de
+   manera compatible con versiones anteriores.
+2. Los servidores web escuchan las solicitudes realizadas a una dirección IP y un puerto determinados. Definamos eso en
+   una constante dentro de la función principal:
+  #+begin_src go
+    const serverAddr string = "127.0.0.1:8081"
+  #+end_src
+3. Si queremos responder a las solicitudes enviadas al directorio raíz de nuestro servidor web, debemos decirle que
+   estamos interesados en la URL de esa ruta y qué queremos que suceda cuando se reciba una solicitud.  Hacemos esto
+   usando ~http.HandleFunc()~ con dos parámetros: un patrón y una función.  El patrón indica la ruta que nos interesa
+   (como en "/" o "/customers"), pero, desde Go 1.22, el patrón también se puede usar para especificar el verbo HTTP,
+   restringir a un nombre de host determinado y/o extraer parámetros de la URL.  En este caso, usaremos "GET /", lo que
+   significa que estamos interesados en solicitudes GET a la raíz.  La función toma dos parámetros: un
+   http.ResponseWriter, utilizado para producir la respuesta, y un http.Request que contiene los datos de la
+   solicitud. Usaremos una función anónima (también conocida como lambda) que inicialmente no hace nada.
+  #+begin_src go
+    http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+    })
+  #+end_src
+4. Dentro de nuestra lambda, podemos usar el /response writer/ para añadir algún mensaje a nuestra respuesta.  Usamos el
+   método ~Write()~ del /response writer/ que toma un /slice/ de bytes (es decir, una "vista" de una
+   matriz/arreglo/array), por lo que necesitamos convertir la cadena.  Aquí se podría poner código HTML dentro de la
+   cadena.
+  #+begin_src go
+    w.Write([]byte("HTTP Caracola"))
+  #+end_src
+5. Dile al servidor que acepte conexiones a la dirección IP y al puerto con la funcionalidad que acabamos de configurar.
+  #+begin_src go
+    http.ListenAndServe(serverAddr, nil)
+  #+end_src
+6. ~http.ListenAndServe()~ devuelve un error cuando finaliza. Es una buena idea envolverlo con otra función que
+   enviará al log el mensaje de error cuando eso suceda.
+  #+begin_src go
+    log.Fatal(http.ListenAndServe(serverAddr, nil))
+  #+end_src
+7. Compila y ejecuta. El codespace ofrecerá usar un navegador o abrir el puerto. Puedes ignorar esto por ahora.
+8. Si ejecutas el programa desde la terminal, abre una segunda terminal usando el "+" a la derecha de la shell
+   zsh. Realiza una solicitud desde la terminal para que nuestro servidor web responda.
+  #+begin_src shell
+    curl -i localhost:8081/
+  #+end_src
+
+** (Des)Serialización
+1. Los controladores (handlers) HTTP también se pueden implementar como funciones normales (no anónimas) y, en realidad,
+   son más fáciles de mantener. Definamos uno para un punto final que se pueda usar para crear una nota.
+  #+begin_src go
+    func createNote(w http.ResponseWriter, r *http.Request) {
+    }
+  #+end_src
+2. Antes de que podamos implementar ese controlador, necesitamos definir un tipo que contendrá los datos de una nota. La
+   nota más sencilla podría tener título y texto.  Pondremos este código antes de la función principal.
+  #+begin_src go
+    type Note struct {
+            Title string
+            Text  string
+    }
+  #+end_src
+3. Pero podemos tener más datos, como una lista de categorías, que en Go se representa como una porción de cadenas.
+    (~[]string~), o un campo que utiliza otro tipo que define el alcance de esta nota como una combinación de un proyecto
+    y un área. La definición completa de estos tipos sería:
+   #+begin_src go
+     type Scope struct {
+             Project string
+             Area    string
+     }
+
+     type Note struct {
+             Title string
+             Tags  []string
+             Text  string
+             Scope Scope
+     }
+   #+end_src
+4. Observa que tanto el nombre de los tipos como los nombres de los campos comienzan con una letra mayúscula. Esa es la
+   manera de decir en Go que algo está exportado y también se aplicaría a los nombres de funciones. Es similar a usar un
+   atributo =public= en otros lenguajes de programación.
+5. Date cuenta también de que las declaraciones de los campos tienen el nombre del campo primero y su tipo después. El
+   último campo se llama =Scope= (en mayúscula porque se exporta) y su tipo, definido unas líneas más arriba, también se
+   llama =Scope=. No hay problema, Go sabrá diferenciar cada cosa según la posición.
+6. Entrando en nuestro /handler/ ~createNote()~, podemos definir una variable para el tipo que acabamos de declarar.  El orden
+   también es el nombre de la variable primero, el tipo después. ~note~ es una variable válida a partir de ahora, pero
+   por el momento todos los campos están vacíos.
+  #+begin_src go
+    var note Note
+  #+end_src
+7. Los datos se intercambian entre servidores HTTP y clientes utilizando algún formato de serialización. Uno de los más
+   comunes hoy en día es JSON. Creemos un decodificador que pueda convertir bytes del flujo de la solicitud HTTP en un
+   objeto.  El paquete =encoding/json= de la biblioteca estándar proporciona lo que necesitamos. Fíjate que no había
+   declarado la variable ~decodificador~.  En este caso, utilizo la "declaración corta de variable" (~:=~), que declara
+   y asigna valor a la variable en un solo paso.  Esto requiese también que Go realize inferencia de tipos.
+  #+begin_src go
+    decoder := json.NewDecoder(r.Body)
+  #+end_src
+8. Este decodificador se puede utilizar ahora para deserializar los datos de la solicitud HTTP.  Ese método devuelve un
+   error, que será ~nil~ (sin valor) si todo salió bien, o tendra algún valor (=error=) en caso contrario.  Observa que
+   usamos ~&~ para pasar un referencia a la variable en lugar de su valor, por lo que el método puede cambiar su valor.
+  #+begin_src go
+    err := decoder.Decode(&note)
+  #+end_src
+9. La expresión se puede envolver para usarla como condición en una instrucción =if=.  Es completamente correcto en Go
+   obtener un valor y luego comparar en una expresión después de un punto y coma. No hay paréntesis alrededor de la
+   expresión condicional completa.
+  #+begin_src go
+    if err := decoder.Decode(&note); err != nil {
+    }
+  #+end_src
+10. Si algo salió mal, queremos informar al cliente HTTP de que hubo un problema y salir de la función. Este salida
+    anticipada de la función es muy común cuando se manejan errores en Go. ~http.Error()~ es proporcionado por el
+    paquete =net/http= y escribe al /response writer/ el mensaje de error proporcionado y establece el estado HTTP.
+   #+begin_src go
+     http.Error(w, err.Error(), http.StatusBadRequest)
+     return
+   #+end_src
+11. Si todo fue bien, simplemente imprimimos el valor de la nota que envió el cliente.  Aquí usamos otra función del
+    paquete =fmt= que escribe los datos proporcionados a un /Writer/, utilizando una cadena de formato. Las cadenas de
+    formato son similares a las utilizadas en C, pero con algunas opciones extra y más seguridad.  "%+v" significa
+    imprimir el valor en un formato predeterminado e incluir los nombres de los campos (% para indicar que se trata de
+    un especificador de formato, v para imprimir el valor y + para incluir los nombres de los campos).
+   #+begin_src go
+     fmt.Fprintf(w, "Note: %+v", note)
+   #+end_src
+12. Agreguemos este /handler/ a nuestro servidor. Se utilizará cuando se envíe una solicitud POST a la ruta =/notes=.
+   #+begin_src go
+     http.HandleFunc("POST /notes", createNote)
+   #+end_src
+13. Ejecuta esta nueva versión.
+14. Primero probemos qué sucede cuando no se pueden deserializar los datos. Deberíamos obtener un código de estado 400 y
+    el mensaje de error en el cuerpo.
+   #+begin_src shell
+     curl -iX POST localhost:8081/notes
+   #+end_src
+15. Finalmente veamos qué sucede cuando pasamos algunos datos válidos.  Los datos deserializados se imprimirán a la
+    salida estándard del programa.
+   #+begin_src shell
+     curl -iX POST -d '{ "title": "Master plan", "tags": ["ai","users"], "text": "ubiquitous AI", "scope": {"project": "world domination", "area":"strategy"} }' localhost:8081/notes
+   #+end_src
+
+* Ideal para construir backends
+
+El intercambio de datos no tiene ningún valor si se olvidan de inmediato.  Vamos a conservar esos datos usando MongoDB y
+para ello, necesitarás un clúster Atlas de MongoDB. El gratuito es más que suficiente. Si no tienes una cuenta, [[https://mongodb-developer.github.io/intro-lab/docs/intro][aquí]]
+explica cómo obtenerla y crear el primer clúster.  No es necesario realizar todos los pasos del documento, solo las
+partes "Crear una cuenta" y "Crear un clúster" en la sección "Atlas de MongoDB".  Llama a tu proyecto "Intro2Go" y a tu
+base de datos "NoteKeeper" en un cluster *GRATUITO*. Crea un nombre de usuario y contraseña que usarás en un
+momento. Verifica que tu dirección IP tiene permitido el acceso.
+
+1. Hasta ahora hemos utilizado paquetes de la biblioteca estándar, pero nos gustaría utilizar el driver de MongoDB para
+   conectarnos a nuestro clúster Atlas.  La siguiente línea agrega el driver de Go de MongoDB a las dependencias de
+   nuestro proyecto, incluidas las entradas en =go.mod= para éste y todas sus dependencias.  También mantiene hashes de
+   las dependencias en =go.sum=, para garantizar la integridad, y descarga todo el código para poder incluirlo en el
+   programa.
+  #+begin_src shell
+    go get go.mongodb.org/mongo-driver/mongo
+  #+end_src
+2. MongoDB usa BSON para serializar y almacenar los datos.  Es más eficiente y admite más tipos que JSON (os estamos
+   mirando, fechas, pero también BinData).  Y podemos usar la misma técnica que usábamos en la deserialización de JSON,
+   para convertir a BSON.  Sin embargo, en este caso la conversión la realizará el driver.  Vamos a declarar una
+   variable global para mantener la conexión a MongoDB Atlas y usarla desde los /handlers/ de HTTP.  Esta no es la mejor
+   forma de hacerlo.  En su lugar, podríamos definir un tipo que contenga el cliente y cualquier otra dependencia y que
+   proporcione métodos, que tendrían acceso a las dependencias, para ser usados como /handlers/ de HTTP.
+  #+begin_src go
+    var mdbClient *mongo.Client
+  #+end_src
+3. En la función =main= inicializamos la conexión a Atlas.  Observa que esta función devuelve dos cosas. Para guardar la
+   primera estamos usando una variable que ya ha sido definida en el ámbito global.  La segunda, =err=, no está definida
+   en el alcance actual, por lo que potencialmente podríamos usar aquí la declaración corta de variable.  Sin embargo,
+   si lo hacemos, ignorará la variable global que creamos para el cliente (=mdbClient=) y definirá una variable local
+   con ese mismo nombre solo para este alcance. Así pues, usemos una asignación normal, que requiere que se declare
+   =err= para poder asignarle un valor.
+  #+begin_src go
+    var err error
+    mdbClient, err = mongo.Connect(,)
+  #+end_src
+4. El primer argumento de ~Connect()~ es un contexto, que permite compartir datos y solicitudes de cancelación entre la
+   función principal y el cliente que se crea.  Lo más simple aquí es crear uno que sirva para realizar trabajo en
+   segundo plano.  Sería posible agregar un temporizador de cancelación a este contexto, entre otras cosas.
+  #+begin_src go
+    ctxBg := context.Background()
+  #+end_src
+5. El segundo argumento es una estructura que contiene las opciones utilizadas para crear la conexión.  Lo mínimo es
+   tener una URI para nuestro clúster Atlas MongoDB. Obtenemos ese URI de la página del clúster, haciendo clic en "Get
+   Connection String".  Creamos una constante con esa cadena de conexión y sustituimos la contraseña. *NO* uses la que
+   figura a continuación porque no funcionará.  Consíguelo de *TU* clúster.  Tener la URI de conexión con usuario y
+   contraseña como constante tampoco es una buena práctica. En su lugar, deberíamos pasar estos datos utilizando una
+   variable de entorno.
+  #+begin_src go
+    const connStr string = "mongodb+srv://yourusername:yourpassword@notekeeper.xxxxxx.mongodb.net/?retryWrites=true&w=majority&appName=NoteKeeper"
+  #+end_src
+6. Ahora podemos usar esa constante para crear el segundo argumento en la expresión.
+  #+begin_src go
+    var err error
+    mdbClient, err = mongo.Connect(ctxBg, options.Client().ApplyURI(connStr))
+  #+end_src
+7. Si no podemos conectarnos a Atlas, no tiene sentido continuar, por lo que registramos el error y salimos del
+   programa. ~log.Fatal()~ se encarga de ambas cosas.
+  #+begin_src go
+    if err != nil {
+            log.Fatal(err)
+    }
+  #+end_src
+8. Si la conexión ha tenido éxito, lo primero que queremos hacer es asegurarnos de que se cerrará si abandonamos esta
+   función. Usamos =defer= para eso.  Todo lo que aplacemos se ejecutará cuando salga del alcance de esa función,
+   incluso si las cosas van mal y se produce un =panic=.  Encapsulamos lo que queremos que se haga en una función
+   anónima y la invocamos porque =defer= es una declaración. De esta manera, podemos obtener el valor de retorno del
+   método ~Disconnect()~ y actuar en consecuencia.
+  #+begin_src go
+    defer func() {
+            if err = mdbClient.Disconnect(ctxBg); err != nil {
+                    panic(err)
+            }
+    }()
+  #+end_src
+9. Después queremos usar la colección (aproximadamente equivalente a una tabla en una base de datos relacional) que
+   contendrá nuestras notas en la base de datos NoteKeeper.  La primera vez que hagamos referencia a esta colección, se
+   crea.  Y esto se puede hacer porque no es necesario definir el esquema de esa colección antes de agregarle datos.
+   Maravillas del NoSQL. Vamos a acceder a la colección desde el /hadler/ de HTTP implementado en ~CreateNote()~.
+  #+begin_src go
+    notesCollection := mdbClient.Database("NoteKeeper").Collection("Notes")
+  #+end_src
+10. E insertamos la nota que se ha obtenido deserilizando los datos presentes en la solicitud.  También de la solicitud
+    HTTP obtenemos el contexto que se utilizó con ella, para extender su uso a la solicitud a Atlas.
+   #+begin_src go
+     result, err := notesCollection.InsertOne(r.Context(), note)
+   #+end_src
+11. Si hubiera algún problema con la solicitud ~InsertOne()~, el /handler/ debería devolver un error y el estado HTTP
+    adecuado.  No es una buena práctica devolver el error de la base de datos al usuario. Quizás estés revelando
+    demasiada información.
+   #+begin_src go
+     if err != nil {
+             http.Error(w, err.Error(), http.StatusBadRequest)
+             return
+     }
+   #+end_src
+12. Y si todo ha ido bien imprimimos el identificador de la nueva entrada.
+   #+begin_src go
+     log.Printf("Id: %v", result.InsertedID)
+   #+end_src
+
+* Fantástico para la concurrencia
+Hemos establecido una forma de cerrar correctamente la conexión a la base de datos. Sin embargo, no tenemos forma de
+detener el servidor web y, por lo tanto, este código nunca se ejecuta.
+
+1. Antes de que podamos personalizar la forma en que se cierra nuestro servidor HTTP, debemos organizar la forma en que
+   está construido.  En primer lugar, las rutas que creamos se agregan a ~DefaultServeMux~.  En su lugar, podemos crear
+   nuestro propio enrutador y agregarle las rutas (en lugar de las antiguas).
+  #+begin_src go
+    router := http.NewServeMux()
+    router.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+            w.Write([]byte("HTTP Caracola"))
+    })
+    router.HandleFunc("POST /notes", createNote)
+  #+end_src
+2. El router que acabamos de crear, junto con otros parámetros de configuración, nos puede servir para crear un
+   =http.Server=. Esto nos permitiría también pueden configurar otros parámetros: consulta la [[https://pkg.go.dev/net/http#Server][documentación de este
+   tipo]].
+  #+begin_src go
+    server := http.Server{
+            Addr: serverAddr,
+            Handler: router,
+    }
+  #+end_src
+3. Utilicemos este servidor para atender conexiones, en lugar del predeterminado.  Aquí, no necesitamos parámetros en la
+   función, porque se proporcionan con la instancia ~server~ y estamos invocando uno de sus métodos.
+  #+begin_src go
+    log.Fatal(server.ListenAndServe())
+  #+end_src
+4. Si compilas y ejecutas esta versión, debería comportarse exactamente igual que antes.
+5. La función ~ListenAndServe()~ devuelve un error específico cuando se cierra el servidor con un
+   ~Shutdown()~. Gestionemos éste por separado.
+  #+begin_src go
+    if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+            fmt.Fatalf(os.Stderr, "HTTP server error %v\n", err)
+    }
+  #+end_src
+6. El tipo =Server= tiene otros métodos que podemos usar. Entre otros, podemos definir la función que se ejecutará
+   inmediatamente tras invocar ~Shutdown()~.
+  #+begin_src go
+    server.RegisterOnShutdown(func() {
+            fmt.Println("Signal shutdown")
+    })
+  #+end_src
+7. Luego definimos una función anónima que espera la señal de interrupción e inicia el apagado ordenado del
+   servidor. Comenzamos con una función vacía.
+  #+begin_src go
+    func() {
+    }
+  #+end_src
+8. Go maneja señales POSIX usando ~signal.Notify()~.  Esta función toma un canal (/channel/) que se utilizará para
+   notificar y la señal POSIX que desea que se maneje.  Un canal es como una tubería en Go con un tipo asociado que se
+   define cuando se crea el canal.  Los datos se envían a un canal usando esta notación: ~channel <- data~.  Y se leen
+   usando esta otra notación: ~data <- channel~.  Si lees de un canal que no tiene datos, el "hilo de ejecución" actual
+   se detiene y espera a que haya datos disponibles.  Si escribes datos en un canal, el "hilo de ejecución" actual se
+   detiene y espera a que se lean los datos.  Debido a este comportamiento específico, los canales se utilizan
+   comúnmente como mecanismo de sincronización.  Los canales también pueden tener un búfer de tamaño fijo. Escribir en
+   un canal no bloquea hasta que el búfer esté lleno. Creemos el canal que comunica señales (~os.Signal~) con un buffer
+   de un elemento y usémoslo con la función para manejar la señal.
+  #+begin_src go
+    sigint := make(chan os.Signal, 1)
+    signal.Notify(sigint, os.Interrupt)
+  #+end_src
+9. La lectura de este canal bloqueará hasta que llegue una señal de interrupción (Control+C).
+  #+begin_src go
+    <-sigint
+  #+end_src
+10. Y cuando eso suceda, podemos iniciar el proceso de cierre. Si recibimos un error, lo registraremos e invocamos un
+    =panic=.  Podríamos (¿deberíamos?) tener un tiempo de espera en este contexto.
+   #+begin_src go
+     if err := server.Shutdown(context.Background()); err != nil {
+             log.Fatalf("Server shutdown error: %v", err)
+     }
+   #+end_src
+11. Ahora que hemos definido la función anónima, poniendo paréntesis al final, invocamos la función. Sin embargo, si
+    simplemente hacemos eso, esta función se ejecutará en el "hilo de ejecución" actual y nuestro programa esperará la
+    señal y apagará el servidor sin siquiera iniciarlo.  Necesitamos crear otro "hilo de ejecución". Afortunadamente,
+    esto es trivial en Go: puedes crear otro "hilo de ejecución" usando la palabra clave =go= antes de ejecutar una
+    función.  Eso se llama gorutina.
+   #+begin_src go
+     go func() {
+             // ...
+     }()
+   #+end_src
+12. Si ejecutamos esta versión del programa, debería funcionar bien.  Sin embargo, hay algo que hemos pasado por
+    alto. Cuando se invoca ~server.Shutdown()~, el servidor dejará de escuchar y saldrá, también ejecutará la función
+    que hemos registrado con ~RegisterOnShutdown()~ en otra gorutina.  Y dependiendo del orden de ejecución y de la
+    duración de la función registrada, es posible que salga de =main= antes de que la función registrada finalice su
+    trabajo.  Cuando un programa de Go sale de la función principal, cualquier otra gorutina se cancela. Podemos
+    utilizar otro canal para evitar que eso suceda. Creamos este nuevo canal sin datos (estructura vacía), ya que solo
+    está destinado a la sincronización.
+   #+begin_src go
+	done := make(chan struct{})
+   #+end_src
+13. Leeremos de este canal justo antes de salir de la función principal. Si aún no hemos escrito en el, la ejecución
+    quedará bloqueada allí.
+   #+begin_src go
+     <-done
+   #+end_src
+14. Cuando comenzamos a ejecutar la función que se ejecutará al apagar, diferimos la escritura en este canal,
+    asegurandonos de que será lo último que se haga cuando se finalice la función, desbloqueando el final de la
+    ejecución del programa.
+   #+begin_src go
+     defer func(){
+             done<-struct{}{}
+     }()
+   #+end_src
+15. Agreguemos algo de retraso a la función para verificar que esté haciendo su trabajo.
+   #+begin_src go
+     time.Sleep(5 * time.Second)
+   #+end_src
+16. Esto debería resolver la situación. Compila y pruébalo.
+17. Sin embargo, si el servidor falla debido a algún error (por ejemplo, si ya tengo otro servidor escuchando en ese
+    mismo puerto), permanecerá allí esperando a que se escriba el canal =done=.  Una forma de solucionarlo es cerrar
+    el canal, porque la lectura desde un canal cerrado no bloquea. La otra es utilizar la función de log adecuada para
+    provocar un =panic= cuando se detecta el error. ~log.Fatal()~ imprime y usa ~os.Exit()~, mientras que ~log.Panic()~
+    imprime un mensaje y desencadena un =panic= que hace que se ejecuten funciones diferidas.
+
+* Conclusión
+En este taller hemos recorrido distintos aspectos de la programación en Go incluyendo funcionalidades que hacen de este
+lenguaje una de las opciones más atractivas para muchos casos de uso, como la programación de herramientas de línea de
+comandos, backends, microservicios, servicios distribuidos o aplicaciones en el Cloud.
+
+Si has realizado todo el taller, habrás visto ejemplos realistas de:
+- La sintaxis de Go, que es bastante simple en comparación con otros lenguajes de su categoría.
+- El uso de la biblioteca estándar para la creación de servidores HTTP.
+- La (de)serialización tanto con JSON como con otros formatos.
+- El uso de paquetes para incorporar funcionalidad adicional de forma sencilla (como el driver de MongoDB).
+- La persistencia de datos moderadamente complejos en un servicio en el Cloud.
+- Las posibilidades de configuración ofrecidas por el servidor de HTTP de la biblioteca estandar.
+- La creación de gorutinas que permite la ejecución concurrente de código.
+- La utilización de canales para la sincronización de las gorutinas.
+
+Esperamos que éste haya sido el primero de tus pasos en el mundo de la programación en Go y que disfrutes cada uno de
+ellos.
+
+¡Hasta la próxima!
