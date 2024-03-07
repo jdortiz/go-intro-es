@@ -73,8 +73,9 @@ Para que esto funcione, creo que hay que adoptar ciertos compromisos que espero 
    restringir a un nombre de host determinado y/o extraer parámetros de la URL.  En este caso, usaremos "GET /", lo que
    significa que estamos interesados en solicitudes GET a la raíz.  La función toma dos parámetros: un
    http.ResponseWriter, utilizado para producir la respuesta, y un http.Request que contiene los datos de la
-   solicitud. Usaremos una función anónima (también conocida como lambda) que inicialmente no hace nada.
-  #+begin_src go
+   solicitud. Usaremos una función anónima (también conocida como lambda) que inicialmente no hace nada.  Necesitaras
+   importar el paquete "net/http" y VSCode lo puede hacer automáticamente con un /quick fix/.
+  #+begin_src og
     http.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
     })
   #+end_src
@@ -203,7 +204,8 @@ para ello, necesitarás un clúster Atlas de MongoDB. El gratuito es más que su
 explica cómo obtenerla y crear el primer clúster.  No es necesario realizar todos los pasos del documento, solo las
 partes "Crear una cuenta" y "Crear un clúster" en la sección "Atlas de MongoDB".  Llama a tu proyecto "Intro2Go" y a tu
 base de datos "NoteKeeper" en un cluster *GRATUITO*. Crea un nombre de usuario y contraseña que usarás en un
-momento. Verifica que tu dirección IP tiene permitido el acceso.
+momento. Verifica que la dirección IP de tu servidor tiene permitido el acceso.  Si usas el codespace, incluye la
+dirección 0.0.0.0 para indicar que se permite acceder a cualquier IP.
 
 1. Hasta ahora hemos utilizado paquetes de la biblioteca estándar, pero nos gustaría utilizar el driver de MongoDB para
    conectarnos a nuestro clúster Atlas.  La siguiente línea agrega el driver de Go de MongoDB a las dependencias de
@@ -330,7 +332,7 @@ detener el servidor web y, por lo tanto, este código nunca se ejecuta.
    ~Shutdown()~. Gestionemos éste por separado.
   #+begin_src go
     if err := server.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
-            fmt.Fatalf(os.Stderr, "HTTP server error %v\n", err)
+            log.Fatalf("HTTP server error %v\n", err)
     }
   #+end_src
 6. El tipo =Server= tiene otros métodos que podemos usar. Entre otros, podemos definir la función que se ejecutará
